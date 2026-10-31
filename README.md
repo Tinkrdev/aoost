@@ -19,9 +19,12 @@ Upload files into the folders on GitHub (open the folder, then **Add file → Up
 
 | What | Folder | Size | List it in |
 |---|---|---|---|
+| Artwork strip at the top | `art/` | 1200 px tall, any shape | `CAROUSEL` (empty = uses `ARTWORK`) |
 | Project artworks | `art/` | 1600 px on the long edge, any shape | `ARTWORK` |
 | Sticky note on the projects table | `notes/` | 600 × 600 px, PNG | `SITE_NOTES` |
-| Playlist covers | `covers/` | 1080 × 1350 px | `cover` on each playlist in `PLAYLISTS` |
+| Playlist covers (optional) | `covers/` | 1080 × 1080 px | `cover` on a playlist in `PLAYLISTS` |
+
+Playlist names and covers come from Spotify automatically. Rename a playlist or change its cover in Spotify and the site follows. Set `cover` only to override the Spotify cover with your own.
 
 Example:
 
