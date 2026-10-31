@@ -254,7 +254,7 @@ footer{position:relative;display:flex;justify-content:flex-end;border-top:1px so
 
 /* western line art */
 .doodle{fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
-.who-row{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s4)}
+.who-row{display:flex;align-items:flex-end;justify-content:center;gap:var(--s4)}
 .who-row .cactus{flex:none;width:clamp(38px,10vw,58px);height:auto;aspect-ratio:60/100;transform-origin:50% 100%;animation:sway 6s ease-in-out infinite}
 @keyframes sway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
 .head{position:relative}
@@ -273,6 +273,18 @@ footer .scorp .legs{animation:scuttle .22s ease-in-out infinite alternate;transf
 .rodeo{position:relative;background:var(--white);box-shadow:0 0 0 1px var(--rule)}
 .rodeo canvas{display:block;width:100%;height:clamp(230px,62vw,300px);touch-action:manipulation;cursor:pointer}
 .rodeo canvas:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.board-wrap{display:flex;flex-direction:column;gap:var(--s4)}
+.lb-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.lb-list{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.lb-list li{display:grid;grid-template-columns:2.2em 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--rule)}
+.lb-list li .n{color:var(--ink-2)}
+.lb-list li.me{color:var(--blue)}
+.lb-list li.empty{display:block;color:var(--ink-2)}
+.lb-form{display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--white);box-shadow:0 0 0 1px var(--ink)}
+.lb-form b{color:var(--ink);font-weight:500}
+.lb-row{display:flex;gap:8px}
+.lb-row input{flex:1;min-width:0;font:400 16px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:10px 12px;border:1px solid var(--ink);border-radius:999px;background:transparent;color:var(--ink)}
+.lb-row input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.who-row .cactus,.tumble svg,.tumble svg path,footer .scorp,footer .scorp .legs{animation:none}.tumble{display:none}}
 @media (prefers-reduced-motion:reduce){.draw .ink-path{transition:none}.viewer .stage img,.viewer .stage canvas{animation:none}.mw-play{transition:none}.guide-v,.guide-h{transition:none}.tbox{animation:none}.disc{transition:none}.ps-toast{transition:none}}
 </style>
@@ -294,7 +306,6 @@ footer .scorp .legs{animation:scuttle .22s ease-in-out infinite alternate;transf
 
   <div class="who-row">
     <p class="who">Alex · Cape Town</p>
-    <svg class="doodle cactus" viewBox="0 0 60 100" aria-hidden="true"><use href="#w-cactus"/></svg>
   </div>
 
   <section aria-labelledby="h-proj">
@@ -407,10 +418,19 @@ footer .scorp .legs{animation:scuttle .22s ease-in-out infinite alternate;transf
     </div>
   </section>
 
-  <section aria-labelledby="h-rodeo">
+  <section aria-label="Rodeo mini game">
     <div class="tumble" aria-hidden="true"><svg class="doodle" viewBox="0 0 40 40"><path id="tumblePath"/></svg></div>
-    <div class="head"><h2 id="h-rodeo" data-underline>rodeo</h2><svg class="doodle skull" viewBox="0 0 100 72" aria-hidden="true"><use href="#w-skull"/></svg></div>
     <div class="rodeo"><canvas id="rodeo" tabindex="0" aria-label="Rodeo, a mini game. Tap, or press space, to jump your horse over the cacti, scorpions and tumbleweeds."></canvas></div>
+    <div class="board-wrap">
+      <form class="lb-form" id="lbForm" hidden>
+        <label for="lbName" class="label">New best: <b id="lbScore">0</b>. Your name?</label>
+        <div class="lb-row"><input id="lbName" maxlength="12" autocomplete="nickname" enterkeyhint="done" placeholder="NAME" required><button class="btn" type="submit">Save</button></div>
+      </form>
+      <div class="lb">
+        <div class="lb-head"><span class="label">Leaderboard</span><span class="label lb-scope" id="lbScope">this device</span></div>
+        <ol class="lb-list" id="lbList"></ol>
+      </div>
+    </div>
   </section>
 
   <footer><svg class="doodle scorp" viewBox="0 0 120 70" aria-hidden="true"><use href="#w-scorpion"/></svg><span class="label">aoost · 2026</span></footer>
@@ -436,6 +456,8 @@ const CAROUSEL = [           // the artwork strip at the top; leave empty to reu
 const SITE_NOTES = [         // sticky notes around the page: 600 × 600
   // 'notes/note-1.png', 'notes/note-2.png',
 ];
+const SCOREBOARD = null;      // leaderboard: null keeps scores on each visitor's device; add a Supabase project here to share one board
+// const SCOREBOARD = {url:'https://YOUR-PROJECT.supabase.co', key:'YOUR-ANON-KEY'};
 const PLAYLISTS = [          // name + cover come from Spotify on your live site; set cover to override (square, 1080 × 1080)
   {title:'Rock',        id:'2FeVxQ6ZPLOAuoejGJj9Fb', cover:null},
   {title:'Alt',         id:'3PbXJWUZ4RooUU0aSSdDi0', cover:null},
@@ -571,7 +593,7 @@ riderImg.src=RIDER_SRC;
 function sizeRodeo(){rdpr=Math.min(2,devicePixelRatio||1);const r=rc.getBoundingClientRect();RW=r.width;RH=r.height;rc.width=Math.max(1,RW*rdpr);rc.height=Math.max(1,RH*rdpr);}
 new ResizeObserver(()=>{sizeRodeo();drawRodeo(performance.now());}).observe(rc);
 const GY=()=>RH-38, RSC=()=>Math.min(RH*.5/RIDER.h,RW*.44/RIDER.w), RX=()=>Math.max(6,RW*.04);
-function startRodeo(){Object.assign(G,{state:'run',y:0,vy:0,score:0,speed:6.2,obs:[],next:RW*1.15,ground:0,stride:0});}
+function startRodeo(){lbHideForm();Object.assign(G,{state:'run',y:0,vy:0,score:0,speed:4.6,obs:[],next:RW*1.15,ground:0,stride:0});}
 function press_(){if(G.state!=='run'){startRodeo();return;}if(G.y>=0){G.vy=-12.6;G.hold=true;}}
 function release(){G.hold=false;if(G.vy<-5)G.vy=-5;}
 rc.addEventListener('pointerdown',e=>{e.preventDefault();rc.focus({preventScroll:true,focusVisible:false});press_();});
@@ -582,14 +604,25 @@ function spawn(){const r=Math.random();
   if(r<.52){const h=30+Math.random()*26;G.obs.push({k:'cactus',x:RW+20,w:h*.62,h,arms:Math.random()<.7});}
   else if(r<.8){G.obs.push({k:'scorp',x:RW+20,w:40,h:16});}
   else{G.obs.push({k:'tumble',x:RW+20,w:24,h:24,seed:(Math.random()*1e4)|0});}
-  G.next=260+Math.random()*280+G.speed*20;}
-function hitbox(o){if(o.k==='tumble'){const by=-Math.abs(Math.sin(o.x*.032))*26;return[o.x+4,GY()+by-o.h+4,o.x+o.w-4,GY()+by-3];}return[o.x+3,GY()-o.h+3,o.x+o.w-3,GY()];}
-function myBox(){const s=RSC(),x=RX(),w=RIDER.w*s,h=RIDER.h*s;return[x+w*.2,GY()+G.y-h*.58,x+w*.84,GY()+G.y-2];}
+  G.next=300+Math.random()*300+G.speed*26;}
+function hitbox(o){if(o.k==='tumble'){const by=-Math.abs(Math.sin(o.x*.032))*26;return[o.x+4,GY()+by-o.h+4,o.x+o.w-4,GY()+by-3];}if(o.k==='cactus'){const tw=o.w*.38;return o.arms?[o.x+2,GY()-o.h*.8,o.x+o.w-2,GY()]:[o.x+(o.w-tw)/2,GY()-o.h,o.x+(o.w+tw)/2,GY()];}return[o.x+4,GY()-o.h+2,o.x+o.w-4,GY()];}
+function myBox(){const s=RSC(),x=RX(),w=RIDER.w*s,h=RIDER.h*s;return[x+w*.2,GY()+G.y-h*.62,x+w*.9,GY()+G.y];}
+/* the horse's own ink decides a hit: an obstacle only counts when it overlaps solid ink in the frame being drawn */
+const maskCache=new Map();
+function maskOf(fr){if(maskCache.has(fr))return maskCache.get(fr);const fc=press.frame(fr),d=fc.getContext('2d').getImageData(0,0,press.W,press.H).data,m=new Uint8Array(press.W*press.H);
+  for(let i=0;i<m.length;i++)m[i]=d[i*4+3]>0?1:0;
+  /* erode by 2px so stray grain on the outline doesn't count */
+  const W=press.W,H=press.H,e=new Uint8Array(m.length);for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){const i=y*W+x;e[i]=m[i]&m[i-2]&m[i+2]&m[i-2*W]&m[i+2*W];}
+  maskCache.set(fr,e);return e;}
+function curFrame(){return G.y<0?0:Math.floor(G.stride)%RIDER.frames;}
+function inkHit(b){if(!press)return true;const s=RSC(),k=2/s,ox=RX(),oy=GY()+G.y-(RIDER.ground-1)*s,m=maskOf(curFrame()),W=press.W,H=press.H;
+  const x0=Math.max(0,Math.floor((b[0]-ox)*k)),x1=Math.min(W-1,Math.ceil((b[2]-ox)*k)),y0=Math.max(0,Math.floor((b[1]-oy)*k)),y1=Math.min(H-1,Math.ceil((b[3]-oy)*k));
+  for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2)if(m[y*W+x])return true;return false;}
 function stepRodeo(f){G.vy+=.56*f;G.y+=G.vy*f;if(G.y>0){G.y=0;G.vy=0;}
-  const mv=G.speed*f;G.ground+=mv;G.stride+=mv*.075;G.score+=mv*.025;G.speed=Math.min(14,G.speed+.0022*f);
+  const mv=G.speed*f;G.ground+=mv;G.stride+=mv*.075;G.score+=mv*.025;G.speed=Math.min(10,G.speed+.0011*f);
   G.next-=mv;if(G.next<=0)spawn();G.obs.forEach(o=>o.x-=mv);G.obs=G.obs.filter(o=>o.x>-80);
   const me=myBox();
-  for(const o of G.obs){const b=hitbox(o);if(me[0]<b[2]&&me[2]>b[0]&&me[1]<b[3]&&me[3]>b[1]){G.state='over';G.cause=o.k;const s=Math.floor(G.score);if(s>G.hi){G.hi=s;try{localStorage.setItem('aoost-rodeo-hi',String(s));}catch(e){}}break;}}}
+  for(const o of G.obs){const b=hitbox(o);if(me[0]<b[2]&&me[2]>b[0]&&me[1]<b[3]&&me[3]>b[1]&&inkHit(b)){G.state='over';G.cause=o.k;const s=Math.floor(G.score);if(s>G.hi){G.hi=s;try{localStorage.setItem('aoost-rodeo-hi',String(s));}catch(e){}}lbOffer(s);break;}}}
 function line(c,pts){c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);c.stroke();}
 function hatAndLasso(c,h,t){const[x,y]=h;c.fillStyle=RINK;c.strokeStyle=RINK;c.lineCap='round';c.lineJoin='round';
   c.beginPath();c.moveTo(x-14,y+6.5);c.quadraticCurveTo(x,y+9.5,x+15,y+5);c.lineTo(x+13.5,y+7.6);c.quadraticCurveTo(x,y+12,x-13,y+8.6);c.closePath();c.fill();
@@ -608,7 +641,9 @@ function tumbleArt(c,o){const by=-Math.abs(Math.sin(o.x*.032))*26,cx=o.x+o.w/2,c
   for(let i=0;i<42;i++){a+=.8+r()*1.2;const rr=5+r()*8,px=Math.cos(a)*rr,py=Math.sin(a)*rr;i?c.lineTo(px,py):c.moveTo(px,py);}c.stroke();c.restore();}
 function drawRodeo(t){if(!RW)return;const c=rctx,gy=GY();c.setTransform(rdpr,0,0,rdpr,0,0);c.fillStyle=RPAPER;c.fillRect(0,0,RW,RH);c.lineCap='round';c.lineJoin='round';c.strokeStyle=RINK;c.fillStyle=RINK;
   /* brush sun */
-  const sx=RW-58,sy=48;c.lineWidth=4.6;c.beginPath();c.arc(sx,sy,14,0,RTAU);c.stroke();for(let i=0;i<8;i++){const a=i/8*RTAU+.2,r1=22,r2=i%2?29:34;c.lineWidth=4;c.beginPath();c.moveTo(sx+Math.cos(a)*r1,sy+Math.sin(a)*r1);c.lineTo(sx+Math.cos(a)*r2,sy+Math.sin(a)*r2);c.stroke();}
+  const sx=RW-62,sy=52;c.lineWidth=4.6;c.beginPath();c.arc(sx,sy,14,0,RTAU);c.stroke();
+  c.lineWidth=3.4;const wob=reduce?0:t*.004;for(let i=0;i<10;i++){const a=i/10*RTAU+.2,r1=21,r2=i%2?34:42,ca=Math.cos(a),sa=Math.sin(a),amp=2.6,ph=i*1.7+wob;c.beginPath();
+    for(let k=0;k<=12;k++){const u=k/12,r=r1+(r2-r1)*u,w=Math.sin(u*Math.PI*2.5+ph)*amp*Math.min(1,u*3),px=sx+ca*r-sa*w,py=sy+sa*r+ca*w;k?c.lineTo(px,py):c.moveTo(px,py);}c.stroke();}
   /* mesas */
   c.save();c.globalAlpha=.13;const off=(G.ground*.15)%340;c.beginPath();for(let k=-1;k*340-off<RW+340;k++){const b=k*340-off;c.moveTo(b,gy);c.lineTo(b+40,gy);c.lineTo(b+56,gy-28);c.lineTo(b+120,gy-28);c.lineTo(b+132,gy-11);c.lineTo(b+180,gy-11);c.lineTo(b+192,gy-36);c.lineTo(b+236,gy-36);c.lineTo(b+248,gy);c.lineTo(b+340,gy);}c.lineTo(RW+400,gy+1);c.lineTo(-400,gy+1);c.closePath();c.fill();c.restore();
   /* woodcut ground with chisel marks */
@@ -616,7 +651,7 @@ function drawRodeo(t){if(!RW)return;const c=rctx,gy=GY();c.setTransform(rdpr,0,0
   c.save();c.strokeStyle=RPAPER;c.lineWidth=1.5;for(let i=0;i<18;i++){const px=((i*83-G.ground)%(RW+40)+RW+40)%(RW+40)-20,py=gy+9+(i*11%22);c.beginPath();c.moveTo(px,py);c.quadraticCurveTo(px+6,py-2,px+12+(i%3)*5,py);c.stroke();}c.restore();
   G.obs.forEach(o=>{if(o.k==='cactus')cactusArt(c,o.x,gy,o.w,o.h,o.arms);else if(o.k==='scorp')scorpArt(c,o.x,gy,t);else tumbleArt(c,o);});
   /* horse + rider */
-  if(press){const s=RSC(),fr=G.state==='run'?(G.y<0?0:Math.floor(G.stride)%RIDER.frames):G.state==='idle'?5:Math.floor(G.stride)%RIDER.frames;
+  if(press){const s=RSC(),fr=G.state==='idle'?5:curFrame();
     c.save();c.translate(RX(),gy+G.y-(RIDER.ground-1)*s);c.scale(s,s);if(G.state==='over'){c.translate(RIDER.w*.5,RIDER.ground);c.rotate(-.1);c.translate(-RIDER.w*.5,-RIDER.ground);}
     c.imageSmoothingEnabled=true;c.drawImage(press.frame(fr),0,0,press.W,press.H,0,0,RIDER.w,RIDER.h);hatAndLasso(c,RIDER.heads[fr],reduce?0:t);c.restore();}
   /* score */
@@ -625,6 +660,25 @@ function drawRodeo(t){if(!RW)return;const c=rctx,gy=GY();c.setTransform(rdpr,0,0
   c.textAlign='center';
   if(G.state==='idle'){c.font='400 12px "JetBrains Mono", ui-monospace, monospace';c.fillText('TAP TO RIDE',RW/2,RH*.3);}
   if(G.state==='over'){c.font='500 24px Lexend, sans-serif';c.fillText({cactus:'pricked.',scorp:'stung.',tumble:'tumbled.'}[G.cause]||'whoa.',RW/2,RH*.27);c.font='400 11px "JetBrains Mono", ui-monospace, monospace';c.save();c.globalAlpha=.6;c.fillText('TAP TO RIDE AGAIN',RW/2,RH*.27+22);c.restore();}}
+/* leaderboard: top 10, kept on this device unless SCOREBOARD points at a shared Supabase table */
+const lbForm=document.getElementById('lbForm'),lbName=document.getElementById('lbName'),lbList=document.getElementById('lbList');
+let LB=[],lbPending=0,lbMine=-1;
+const lbLocal=()=>{try{return JSON.parse(localStorage.getItem('aoost-rodeo-board')||'[]');}catch(e){return [];}};
+const lbClean=n=>String(n||'').toUpperCase().replace(/[^A-Z0-9 ._-]/g,'').trim().slice(0,12)||'ANON';
+function lbRender(){lbList.innerHTML='';if(!LB.length){lbList.innerHTML='<li class="empty">No riders yet. Be the first.</li>';return;}
+  LB.slice(0,10).forEach((r,i)=>{const li=document.createElement('li');if(i===lbMine)li.className='me';li.innerHTML=`<span class="n">${String(i+1).padStart(2,'0')}</span><span></span><span>${String(r.score).padStart(5,'0')}</span>`;li.children[1].textContent=r.name;lbList.appendChild(li);});}
+async function lbLoad(){if(SCOREBOARD){document.getElementById('lbScope').textContent='everyone';
+    try{const r=await fetch(SCOREBOARD.url+'/rest/v1/scores?select=name,score&order=score.desc&limit=10',{headers:{apikey:SCOREBOARD.key,Authorization:'Bearer '+SCOREBOARD.key}});if(r.ok){LB=await r.json();lbRender();return;}}catch(e){}}
+  LB=lbLocal();lbRender();}
+function lbOffer(s){if(s<1)return;const tenth=LB.length<10?0:LB[Math.min(9,LB.length-1)].score;if(s<=tenth)return;lbPending=s;document.getElementById('lbScore').textContent=String(s).padStart(5,'0');
+  try{lbName.value=localStorage.getItem('aoost-rodeo-name')||'';}catch(e){}lbForm.hidden=false;}
+function lbHideForm(){lbForm.hidden=true;lbPending=0;}
+lbForm.addEventListener('submit',async e=>{e.preventDefault();if(!lbPending)return;const name=lbClean(lbName.value),score=lbPending;try{localStorage.setItem('aoost-rodeo-name',name);}catch(e){}
+  lbHideForm();const row={name,score};
+  if(SCOREBOARD){try{await fetch(SCOREBOARD.url+'/rest/v1/scores',{method:'POST',headers:{apikey:SCOREBOARD.key,Authorization:'Bearer '+SCOREBOARD.key,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});}catch(e){}}
+  const loc=lbLocal();loc.push(row);loc.sort((a,b)=>b.score-a.score);try{localStorage.setItem('aoost-rodeo-board',JSON.stringify(loc.slice(0,10)));}catch(e){}
+  await lbLoad();lbMine=LB.findIndex(r=>r.name===name&&r.score===score);lbRender();});
+lbLoad();
 if('IntersectionObserver' in window)new IntersectionObserver(es=>es.forEach(e=>rodeoOn=e.isIntersecting)).observe(rc);else rodeoOn=true;
 (function loop(t){const dt=Math.min(40,t-(G.last||t));G.last=t;if(rodeoOn){if(G.state==='run')stepRodeo(dt/16.67);drawRodeo(reduce&&G.state!=='run'?0:t);}requestAnimationFrame(loop);})(performance.now());
 
@@ -662,10 +716,14 @@ function accentFrom(src){try{const c=document.createElement('canvas');c.width=c.
   for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/510,s=mx===mn?0:(mx-mn)/(255-Math.abs(mx+mn-255));const score=s*(1-Math.abs(l-.55)*1.6);if(score>bs){bs=score;best=[r,g,b];}}
   return best&&bs>.15?`rgb(${best.join(',')})`:'#E8B26A';}catch(e){return '#E8B26A';}}
 const fmt=ms=>{const s=Math.max(0,Math.round(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
-function drawWave(){const w=mwWave.clientWidth,h=26,mid=h/2,pts=WAVES[curDisc],f=P.dur?Math.min(1,P.pos/P.dur):0,px=Math.max(4.5,Math.min(w-4.5,f*w));
-  const step=w/(pts.length-1);let poly='';for(let k=0;k<pts.length;k++){const x=k*step;if(x>px)break;poly+=`${x.toFixed(1)},${(mid+pts[k]*5.4).toFixed(1)} `;}poly+=`${px.toFixed(1)},${mid}`;
-  mwWave.innerHTML=`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><line x1="${px}" y1="${mid}" x2="${w}" y2="${mid}" stroke="#8a8a8a" stroke-opacity=".5" stroke-width="1.5"/><polyline points="${poly}" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${px}" cy="${mid}" r="4.5" fill="var(--ac)"/></svg>`;
-  mwWave.setAttribute('aria-valuenow',Math.round(f*100));mwWave.setAttribute('aria-valuetext',fmt(P.pos)+' of '+fmt(P.dur));mwTime.textContent=fmt(P.pos)+' / '+fmt(P.dur);
+const WV={key:'',w:0,clip:null,dot:null,rest:null,sec:-1,pl:null};
+function buildWave(){const w=mwWave.clientWidth,h=26,mid=h/2,pts=WAVES[curDisc],step=w/(pts.length-1);let poly='';for(let k=0;k<pts.length;k++)poly+=`${(k*step).toFixed(1)},${(mid+pts[k]*5.4).toFixed(1)} `;
+  const id='wc'+curDisc;mwWave.innerHTML=`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><defs><clipPath id="${id}"><rect x="0" y="0" width="0" height="${h}"/></clipPath></defs><line x1="0" y1="${mid}" x2="${w}" y2="${mid}" stroke="#8a8a8a" stroke-opacity=".5" stroke-width="1.5"/><rect x="0" y="0" width="0" height="${h}" fill="#0b0b0b"/><polyline points="${poly}" clip-path="url(#${id})" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="0" cy="${mid}" r="4.5" fill="var(--ac)"/></svg>`;
+  const sv=mwWave.firstChild;WV.clip=sv.querySelector('clipPath rect');WV.mask=sv.querySelector(':scope>rect');WV.dot=sv.querySelector('circle');WV.w=w;WV.key=curDisc+':'+w;WV.sec=-1;}
+function drawWave(){const w=mwWave.clientWidth;if(!w)return;if(WV.key!==curDisc+':'+w)buildWave();const f=P.dur?Math.min(1,P.pos/P.dur):0,px=Math.max(4.5,Math.min(w-4.5,f*w));
+  WV.clip.setAttribute('width',px.toFixed(2));WV.mask.setAttribute('width',px.toFixed(2));WV.dot.setAttribute('cx',px.toFixed(2));
+  const sec=Math.floor(P.pos/1000);if(sec!==WV.sec){WV.sec=sec;mwWave.setAttribute('aria-valuenow',Math.round(f*100));mwWave.setAttribute('aria-valuetext',fmt(P.pos)+' of '+fmt(P.dur));mwTime.textContent=fmt(P.pos)+' / '+fmt(P.dur);}
+  if(WV.pl===P.playing)return;WV.pl=P.playing;
   mwPlay.setAttribute('aria-label',P.playing?'Pause':'Play');mwPlay.innerHTML=P.playing?'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="#0b0b0b"/><rect x="14" y="5" width="4" height="14" fill="#0b0b0b"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="#0b0b0b"/></svg>';}
 new ResizeObserver(drawWave).observe(mwWave);
 function selectDisc(i,user){curDisc=i;dEl.querySelectorAll('.disc').forEach((x,k)=>x.setAttribute('aria-pressed',k===i));const d=PLAYLISTS[i];placeTbox();
@@ -682,9 +740,9 @@ let scrubbing=false;mwWave.addEventListener('pointerdown',e=>{scrubbing=true;mwW
 mwWave.addEventListener('pointerup',()=>scrubbing=false);mwWave.addEventListener('pointercancel',()=>scrubbing=false);
 mwWave.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();P.pos=Math.max(0,Math.min(P.dur,P.pos+(e.key==='ArrowRight'?5000:-5000)));if(P.ctrl)P.ctrl.seek(Math.round(P.pos/1000));drawWave();}});
 /* in this preview the widget runs on its own clock; on your site Spotify drives it */
-(function loop(t){if(!P.ctrl&&P.playing){P.pos+=t-(P.last||t);if(P.pos>=P.dur)P.pos=0;drawWave();}P.last=t;requestAnimationFrame(loop);})(performance.now());
+(function loop(t){if(P.playing){P.pos+=Math.min(100,t-(P.last||t));if(P.pos>=P.dur)P.pos=P.ctrl?P.dur:0;drawWave();}P.last=t;requestAnimationFrame(loop);})(performance.now());
 if(!IN_CLAUDE){window.onSpotifyIframeApiReady=API=>{API.createController(document.getElementById('spHost'),{uri:'spotify:playlist:'+PLAYLISTS[curDisc].id,width:'100%',height:80},c=>{P.ctrl=c;P.playing=false;
-    c.addListener('playback_update',e=>{const d=e.data||{};P.playing=!d.isPaused;if(d.duration)P.dur=d.duration;if(typeof d.position==='number')P.pos=d.position;drawWave();});});};
+    c.addListener('playback_update',e=>{const d=e.data||{};P.playing=!d.isPaused;if(d.duration)P.dur=d.duration;if(typeof d.position==='number'&&(Math.abs(d.position-P.pos)>700||d.isPaused))P.pos=d.position;P.last=performance.now();drawWave();});});};
   const s=document.createElement('script');s.src='https://open.spotify.com/embed/iframe-api/v1';s.async=true;document.head.appendChild(s);}
 selectDisc(0,false);
 /* on your own site: pull each playlist's name and cover from Spotify (no login needed) */
