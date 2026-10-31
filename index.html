@@ -752,7 +752,9 @@ function sizeRodeo(){rdpr=Math.min(2,devicePixelRatio||1);const r=rc.getBounding
 new ResizeObserver(()=>{sizeRodeo();drawRodeo(performance.now());}).observe(rc);
 /* on phones the canvas grows downward: the extra ground is a thumb pad, so your thumb never covers the play area */
 const PAD=()=>RW<=640?112:0,PLAYH=()=>RH-PAD();
-const KS=()=>Math.max(.55,Math.min(1,RSC()/.888)),GY=()=>PLAYH()-38, RSC=()=>Math.min(PLAYH()*.5/RIDER.h,RW*.44/RIDER.w), RX=()=>Math.max(6,RW*.04);
+/* the horse is drawn at 80% of the size the physics and obstacles are tuned for, so every jump clears with room to spare */
+const BASE=()=>Math.min(PLAYH()*.5/RIDER.h,RW*.44/RIDER.w);
+const KS=()=>Math.max(.55,Math.min(1,BASE()/.888)),GY=()=>PLAYH()-38, RSC=()=>BASE()*.8, RX=()=>Math.max(6,RW*.04);
 function startRodeo(){lbHideForm();sprites();Object.assign(G,{state:'run',y:0,vy:0,score:0,speed:5.4,obs:[],next:RW*1.15,ground:0,stride:0,lvl:1,flash:0,dist:0,streak:0,mult:1,airPassed:false,intro:[],queue:[],pops:[],drifter:null,talk:[],lastTalk:-1e9,nextRandom:G.now+28000,bestSaid:false,startHi:G.hi});setTimeout(()=>{if(G.state==='run')say('start');},700);}
 function press_(){if(G.state!=='run'){startRodeo();return;}if(G.y>=0){G.vy=-12.6*KS();G.hold=true;}}
 function release(){G.hold=false;if(G.vy<-5*KS())G.vy=-5*KS();}
@@ -778,7 +780,7 @@ function make(type,X){const k=KS(),s=RSC(),S=sprites(),dim=(spr,m)=>[spr.w*m*k,s
     case 'devil':{const[w,h]=dim(S.DV[0],1.4);o={k:'devil',x:X,w,h,ph:Math.random()*6};extra=40*k;break;}
     case 'walker':{const[w,h]=dim(S.WALK[0],1.4);o={k:'walker',x:X,w,h,v:1.45};break;}
     case 'vglide':{const[w,h]=dim(S.V[0],1.3);o={k:'vglide',x:X,w,h,v:1.3};extra=w+RIDER.w*s;break;}
-    case 'vswoop':{const[w,h]=dim(S.V[0],1.3);o={k:'vswoop',x:X,w,h,v:1.3};extra=w*.5;break;}
+    case 'vswoop':{const[w,h]=dim(S.V[0],1.05);o={k:'vswoop',x:X,w,h,v:.95};extra=w+RIDER.w*s*.5;break;}
     case 'hawk':{const[w,h]=dim(S.V[0],.9);o={k:'hawk',x:X,y0:14,w,h,v:1.15,drop:RW*(.94+Math.random()*.05),dropped:false};extra=RW*.25;break;}
     case 'watcher':{const[w,h]=dim(S.EYE[0],1.3);o={k:'watcher',x:X,w,h,v:.55,t:0};extra=RW*.5;break;}
   }
@@ -792,7 +794,7 @@ function spawn(){const L=LV(),k=KS();let type,extra=0,alone=false;
   /* never closer than a landing plus a fresh jump; a new hazard gets the stage to itself */
   const min=G.speed*k*50+RIDER.w*RSC()*.9;G.next=Math.max(min,(300+Math.random()*300)*L.gap*k+G.speed*k*22)*(alone?1.5:1)+extra;}
 function devilX(o){return o.x+Math.sin(o.ph+G.ground*.012)*30*KS();}
-function swoopBottom(o){const s=RSC(),rel=(o.x+o.w/2-(RX()+RIDER.w*s*.55))/RW,dip=Math.exp(-Math.pow(rel/.4,4)),hi=RIDER_TOP()-6*s,lo=GY()-4*KS();return hi+(lo-hi)*dip;}
+function swoopBottom(o){const s=RSC(),rel=(o.x+o.w/2-(RX()+RIDER.w*s*.55))/RW,dip=rel>.42?Math.exp(-Math.pow((rel-.42)/.14,2)):rel<-.45?Math.exp(-Math.pow((rel+.45)/.12,2)):1,hi=RIDER_TOP()-6*s,lo=GY()-4*KS();return hi+(lo-hi)*dip;}
 function eyeOpen(o){const ph=(o.t%150)/150;return ph<.62;}
 /* each hitbox is a rectangle; a hit only counts where it overlaps the horse's actual ink (see inkHit) */
 function hitbox(o){const gy=GY(),k=KS();switch(o.k){
@@ -805,7 +807,7 @@ function hitbox(o){const gy=GY(),k=KS();switch(o.k){
   case 'devil':{const x=devilX(o);return[x+o.w*.2,gy-o.h*.95,x+o.w*.8,gy];}
   case 'walker':return[o.x+o.w*.12,gy-o.h*.92,o.x+o.w*.88,gy-2];
   case 'vglide':{const top=RIDER_TOP()-6*RSC()-o.h;return[o.x+o.w*.08,top+o.h*.25,o.x+o.w*.92,top+o.h*.8];}
-  case 'vswoop':{const b=swoopBottom(o);return[o.x+o.w*.08,b-o.h*.75,o.x+o.w*.92,b-o.h*.2];}
+  case 'vswoop':{const b=swoopBottom(o);return[o.x+o.w*.2,b-o.h*.68,o.x+o.w*.8,b-o.h*.25];}
   case 'watcher':{if(!eyeOpen(o))return null;const cx=o.x+o.w/2;return[cx-16*k,gy-22*k,cx+16*k,gy];}
   case 'hawk':return null;
   default:return[o.x+4,gy-o.h+2,o.x+o.w-4,gy];}}
@@ -841,12 +843,12 @@ const TALK={
   random:[['R','COULD’VE TAKEN THE TRAIN.'],['R','THIS ROPE IS JUST FOR LOOKS.'],['R','ONE DAY I’LL NAME THIS HORSE.'],['R','DUST IN EVERYTHING. AGAIN.'],['R','SUN’S OUT. HAT’S ON. FINE.'],['H','THE SUN IS TOO WIGGLY.'],['H','MY BACK.'],['H','ARE WE THERE YET.']],
   over:[['H','I’M TAKING THE WEEKEND.'],['H','THAT ONE’S ON YOU.'],['H','I’M LYING DOWN NOW.'],['H','SAME TIME TOMORROW? NO.'],['H','TELL THE CACTUS I SAID HI.']]};
 /* one line every few seconds at most; game over and new bests always get through */
-function say(id,force){const set=TALK[id];if(!set)return;if(!force&&(G.now-G.lastTalk<4200||G.talk.length))return;const pick=set[(Math.random()*set.length)|0],seq=typeof pick[0]==='string'?[pick]:pick;
+function say(id,force){const set=TALK[id];if(!set)return;if(!force&&(G.now-G.lastTalk<11000||G.talk.length))return;const pick=set[(Math.random()*set.length)|0],seq=typeof pick[0]==='string'?[pick]:pick;
   if(force)G.talk=[];seq.forEach(([who,line],i)=>G.talk.push({who,line,born:G.now+i*1200}));G.lastTalk=G.now+(seq.length-1)*1200;}
 const CAUSE={cactus:'pricked.',scorp:'stung.',tumble:'tumbled.',bones:'boned.',snake:'bitten.',skull:'gored.',wheel:'run over.',devil:'whirled.',walker:'hugged.',vglide:'snatched.',vswoop:'snatched.',watcher:'seen.'};
 function stepRodeo(f){const k=KS(),wasUp=G.y<0;G.vy+=.56*k*f;G.y+=G.vy*f;if(G.y>0){G.y=0;G.vy=0;}
   /* landing: a jump that cleared nothing breaks the streak */
-  if(wasUp&&G.y===0){if(!G.airPassed){if(G.streak>=3&&Math.random()<.6)say('air');G.streak=0;}G.airPassed=false;}
+  if(wasUp&&G.y===0){if(!G.airPassed){if(G.streak>=3&&Math.random()<.35)say('air');G.streak=0;}G.airPassed=false;}
   G.dist+=G.speed*f*.025;
   const nl=LEVELS.findLastIndex?LEVELS.findLastIndex(l=>l&&G.dist>=l.at):LEVELS.reduce((a,l,i)=>l&&G.dist>=l.at?i:a,1);
   if(nl>G.lvl){G.lvl=nl;G.flash=150;G.intro.push(...LEVELS[nl].add.filter(t=>t!=='pair'&&t!=='triple'));
@@ -856,7 +858,7 @@ function stepRodeo(f){const k=KS(),wasUp=G.y<0;G.vy+=.56*k*f;G.y+=G.vy*f;if(G.y>
   G.mult=1+Math.min(4,Math.floor(G.streak/5))*.25;
   if(G.drifter){G.drifter.x-=G.speed*k*f*.55;if(!G.drifter.said&&G.drifter.x<RX()+RIDER.w*RSC()*.9){G.drifter.said=true;say('drifter');}if(G.drifter.x<-220)G.drifter=null;}
   if(!G.bestSaid&&G.startHi>50&&G.score>G.startHi){G.bestSaid=true;say('best',true);}
-  if(G.now>G.nextRandom){G.nextRandom=G.now+26000+Math.random()*14000;say('random');}
+  if(G.now>G.nextRandom){G.nextRandom=G.now+50000+Math.random()*30000;say('random');}
   const mv=G.speed*k*f;G.ground+=mv;G.stride+=mv*.075/k;G.score+=G.speed*f*.025*G.mult;
   G.next-=mv;if(G.next<=0)spawn();
   const S=sprites(),me=myBox(),gy=GY();
@@ -870,8 +872,8 @@ function stepRodeo(f){const k=KS(),wasUp=G.y<0;G.vy+=.56*k*f;G.y+=G.vy*f;if(G.y>
     if(b&&b[0]<me[2]&&b[2]>me[0]&&G.y<0){const gap=b[1]-(gy+G.y);if(gap>=0)o.minGap=Math.min(o.minGap??1e9,gap);}
     if(!o.passed&&o.k!=='hawk'&&(b?b[2]:o.x+o.w)<me[0]){o.passed=true;G.streak++;if(G.y<0)G.airPassed=true;
       if(G.streak===10)say('s10');else if(G.streak===20)say('s20');else if(G.streak===30)say('s30');
-      else if(o.k==='vglide'&&G.y===0)say('vglide');else if(o.k==='vswoop')say('vswoop');else if(o.k==='bones')say('bones');else if(o.k==='watcher')say('watcher');else if(o.fromHawk)say('hawk');
-      if(o.minGap!=null&&o.minGap<9*k){const bonus=Math.round(25*G.mult);G.score+=bonus;G.pops.push({t:'CLOSE +'+bonus,x:me[0]+30,y:gy+G.y-RIDER.h*RSC()*.6,life:60});if(Math.random()<.7)say('close');}}}
+      else if(o.k==='watcher')say('watcher');else if(o.fromHawk)say('hawk');
+      if(o.minGap!=null&&o.minGap<9*k){const bonus=Math.round(25*G.mult);G.score+=bonus;G.pops.push({t:'CLOSE +'+bonus,x:me[0]+30,y:gy+G.y-RIDER.h*RSC()*.6,life:60});if(Math.random()<.35)say('close');}}}
   G.obs=G.obs.filter(o=>o.x>-o.w-120);
   G.pops.forEach(p=>{p.life-=f;p.y-=.4*f;});G.pops=G.pops.filter(p=>p.life>0);
   for(const o of G.obs){const b=hitbox(o);if(b&&me[0]<b[2]&&me[2]>b[0]&&me[1]<b[3]&&me[3]>b[1]&&inkHit(b)){G.state='over';G.cause=o.k;say('over',true);const s=Math.floor(G.score);if(s>G.hi){G.hi=s;try{localStorage.setItem('aoost-rodeo-hi',String(s));}catch(e){}}lbOffer(s);break;}}}
@@ -935,7 +937,8 @@ function drawRodeo(t){if(!RW)return;const c=rctx,gy=GY();c.setTransform(rdpr,0,0
     else if(o.k==='devil')c.drawImage(S.DV[Math.floor(t/70)%6].c,devilX(o),gy-o.h+3,o.w,o.h);
     else if(o.k==='walker')c.drawImage(S.WALK[Math.floor(G.ground/14)%4].c,o.x,gy-o.h+4,o.w,o.h);
     else if(o.k==='vglide'){const top=RIDER_TOP()-6*RSC()-o.h+Math.sin(t*.003)*3;c.drawImage(S.V[Math.floor(t/110)%4].c,o.x,top,o.w,o.h);}
-    else if(o.k==='vswoop')c.drawImage(S.V[Math.floor(t/90)%4].c,o.x,swoopBottom(o)-o.h,o.w,o.h);
+    else if(o.k==='vswoop'){const b=swoopBottom(o),hi=RIDER_TOP()-6*RSC(),d=Math.max(0,Math.min(1,(b-hi)/Math.max(1,gy-hi)));c.save();c.globalAlpha=.12+.3*d;c.fillStyle=RINK;c.beginPath();c.ellipse(o.x+o.w/2,gy+3,o.w*(.25+.2*d),3.2,0,0,RTAU);c.fill();c.restore();}
+    if(o.k==='vswoop')c.drawImage(S.V[Math.floor(t/90)%4].c,o.x,swoopBottom(o)-o.h,o.w,o.h);
     else if(o.k==='hawk'){c.drawImage(S.V[Math.floor(t/100)%4].c,o.x,o.y0,o.w,o.h);if(!o.dropped){const sn=S.SN[0];c.save();c.translate(o.x+o.w*.5,o.y0+o.h*.75);c.rotate(1.2);c.drawImage(sn.c,-8,0,sn.w*.7*k,sn.h*.7*k);c.restore();}}
     else if(o.k==='watcher'){const ph=(o.t%150)/150,fr=ph<.62?0:ph<.68?1:ph<.8?2:ph<.86?1:0,cx=o.x+o.w/2,ey=34;
       if(ph<.62){c.save();c.lineWidth=1;c.globalAlpha=.85;for(let i=0;i<12;i++){const v=i/11;c.beginPath();c.moveTo(cx-7*k+v*14*k,ey+o.h*.62);c.lineTo(cx-16*k+v*32*k,gy);c.stroke();}c.restore();
