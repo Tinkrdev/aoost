@@ -487,8 +487,9 @@ const CAROUSEL = [           // the artwork strip at the top; leave empty to reu
 const SITE_NOTES = [         // sticky notes around the page: 600 × 600
   // 'notes/note-1.png', 'notes/note-2.png',
 ];
-const SCOREBOARD = null;      // leaderboard: null keeps scores on each visitor's device; add a Supabase project here to share one board
-// const SCOREBOARD = {url:'https://YOUR-PROJECT.supabase.co', key:'YOUR-ANON-KEY'};
+const SCOREBOARD = {         // shared leaderboard (Supabase). The publishable key is meant to be public; never put the secret key here
+  url:'https://htlshvacmhprvsupkbpt.supabase.co', key:'sb_publishable_tVvMoEvf6SHjAe-5mU-Bjw_DpdVgSBT',
+};
 const PLAYLISTS = [          // name + cover come from Spotify on your live site; set cover to override (square, 1080 × 1080)
   {title:'Rock',        id:'2FeVxQ6ZPLOAuoejGJj9Fb', cover:null},
   {title:'Alt',         id:'3PbXJWUZ4RooUU0aSSdDi0', cover:null},
@@ -994,15 +995,21 @@ const lbLocal=()=>{try{return JSON.parse(localStorage.getItem('aoost-rodeo-board
 const lbClean=n=>String(n||'').toUpperCase().replace(/[^A-Z0-9 ._-]/g,'').trim().slice(0,12)||'ANON';
 function lbRender(){lbList.innerHTML='';if(!LB.length){lbList.innerHTML='<li class="empty">No riders yet. Be the first.</li>';return;}
   LB.slice(0,10).forEach((r,i)=>{const li=document.createElement('li');if(i===lbMine)li.className='me';li.innerHTML=`<span class="n">${String(i+1).padStart(2,'0')}</span><span></span><span>${String(r.score).padStart(5,'0')}</span>`;li.children[1].textContent=r.name;lbList.appendChild(li);});}
-async function lbLoad(){if(SCOREBOARD){document.getElementById('lbScope').textContent='everyone';
-    try{const r=await fetch(SCOREBOARD.url+'/rest/v1/scores?select=name,score&order=score.desc&limit=10',{headers:{apikey:SCOREBOARD.key,Authorization:'Bearer '+SCOREBOARD.key}});if(r.ok){LB=await r.json();lbRender();return;}}catch(e){}}
-  LB=lbLocal();lbRender();}
+/* new-style Supabase keys go in the apikey header only; old JWT-style anon keys also go in Authorization */
+const sbHeaders=extra=>Object.assign({apikey:SCOREBOARD.key},SCOREBOARD.key.startsWith('eyJ')?{Authorization:'Bearer '+SCOREBOARD.key}:{},extra||{});
+let lbShared=false;
+async function lbLoad(){if(SCOREBOARD){
+    try{const r=await fetch(SCOREBOARD.url+'/rest/v1/scores?select=name,score&order=score.desc,created_at.asc&limit=10',{headers:sbHeaders(),cache:'no-store'});if(r.ok){LB=await r.json();lbShared=true;document.getElementById('lbScope').textContent='everyone';lbRender();return;}}catch(e){}}
+  /* if the shared board can't be reached, fall back to this device's scores */
+  lbShared=false;document.getElementById('lbScope').textContent='this device';LB=lbLocal();lbRender();}
+/* keep the board fresh while it's on screen, so other riders' scores appear without a reload */
+setInterval(()=>{if(SCOREBOARD&&!document.hidden&&G.state!=='run'&&lbForm.hidden)lbLoad();},60000);
 function lbOffer(s){if(s<1)return;const tenth=LB.length<10?0:LB[Math.min(9,LB.length-1)].score;if(s<=tenth)return;lbPending=s;document.getElementById('lbScore').textContent=String(s).padStart(5,'0');
   try{lbName.value=localStorage.getItem('aoost-rodeo-name')||'';}catch(e){}lbForm.hidden=false;}
 function lbHideForm(){lbForm.hidden=true;lbPending=0;}
 lbForm.addEventListener('submit',async e=>{e.preventDefault();if(!lbPending)return;const name=lbClean(lbName.value),score=lbPending;try{localStorage.setItem('aoost-rodeo-name',name);}catch(e){}
   lbHideForm();const row={name,score};
-  if(SCOREBOARD){try{await fetch(SCOREBOARD.url+'/rest/v1/scores',{method:'POST',headers:{apikey:SCOREBOARD.key,Authorization:'Bearer '+SCOREBOARD.key,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});}catch(e){}}
+  if(SCOREBOARD){try{await fetch(SCOREBOARD.url+'/rest/v1/scores',{method:'POST',headers:sbHeaders({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)});}catch(e){}}
   const loc=lbLocal();loc.push(row);loc.sort((a,b)=>b.score-a.score);try{localStorage.setItem('aoost-rodeo-board',JSON.stringify(loc.slice(0,10)));}catch(e){}
   await lbLoad();lbMine=LB.findIndex(r=>r.name===name&&r.score===score);lbRender();});
 lbLoad();
